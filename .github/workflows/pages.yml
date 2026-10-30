@@ -1,0 +1,45 @@
+name: 코어 지표 빌드·배포
+
+on:
+  schedule:
+    # 평일 KST 07:10(미국장 마감 후) = UTC 22:10 일~목
+    - cron: "10 22 * * 0-4"
+    # 평일 KST 23:40(미국장 개장 직후) = UTC 14:40 월~금
+    - cron: "40 14 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: 지표 페이지 생성(외부 조회 실패 칸은 「확인 불가」로 두고 계속)
+        run: python build_market.py site/index.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

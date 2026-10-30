@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1a1a19">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="코어 지표">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>코어 지표</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+.viz-root{color-scheme:light;--surface-0:#f3f3f1;--surface-1:#fcfcfb;--text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#77766f;
+  --grid:#e7e6e1;--up:#e34948;--down:#2a78d6;--ma20:#eb6834;--ma60:#1baf7a;--ma120:#eda100;--ma240:#6250d6;--line:#2a78d6;
+  --good:#008300;--warn:#c98500;--bad:#e34948}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])) .viz-root{color-scheme:dark;--surface-0:#121211;--surface-1:#1a1a19;
+  --text-primary:#f0efec;--text-secondary:#c3c2b7;--text-muted:#93928a;--grid:#2c2c2a;--up:#e66767;--down:#3987e5;--ma20:#d95926;--ma60:#199e70;--ma120:#c98500;--ma240:#9085e9;--line:#3987e5}}
+*{box-sizing:border-box}body{margin:0}
+.viz-root{background:var(--surface-0);color:var(--text-primary);font:15px/1.5 -apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;min-height:100vh;
+  padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 72px)}
+h1{font-size:1.15rem;margin:0}.sub{color:var(--text-muted);font-size:.8rem}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+.card{background:var(--surface-1);border-radius:12px;padding:10px 12px}
+.card .k{font-size:.78rem;color:var(--text-secondary)}.card .v{font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}
+.card .s{font-size:.78rem;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}
+.panel{background:var(--surface-1);border-radius:12px;padding:10px;margin:10px 0}
+.panel h2{font-size:.95rem;margin:2px 4px 6px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.75rem;color:var(--text-secondary);margin:0 4px 6px;font-variant-numeric:tabular-nums}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.chart{width:100%;height:300px}.chart.sm{height:110px}.chart.md{height:170px}
+.tag{display:inline-block;font-size:.72rem;padding:1px 7px;border-radius:999px;border:1px solid var(--grid);color:var(--text-secondary)}
+.tabs{position:fixed;z-index:10;left:0;right:0;bottom:0;display:flex;background:var(--surface-1);border-top:1px solid var(--grid);padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{flex:1;border:0;background:none;padding:12px 0;font:inherit;color:var(--text-muted)}
+.tabs button[aria-selected=true]{color:var(--text-primary);font-weight:700}
+[hidden]{display:none!important}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}td,th{padding:6px 4px;border-bottom:1px solid var(--grid);text-align:right}th:first-child,td:first-child{text-align:left}
+.note{font-size:.75rem;color:var(--text-muted);margin:6px 4px}
+</style></head>
+<body><div class="viz-root">
+<header><h1>시장 지표</h1><div class="sub" id="built"></div></header>
+
+<section id="tab-market">
+  <div class="cards" id="cards"></div>
+  <div class="panel"><h2>S&amp;P 500 <span class="tag" id="spx-tag"></span></h2><div class="legend" id="spx-leg"></div><div class="chart" id="spx"></div><div class="chart sm" id="spx-v"></div></div>
+  <div class="panel"><h2>나스닥 종합 <span class="tag" id="ndx-tag"></span></h2><div class="legend" id="ndx-leg"></div><div class="chart" id="ndx"></div><div class="chart sm" id="ndx-v"></div></div>
+  <div class="panel"><h2>다우 산업 <span class="tag" id="dji-tag"></span></h2><div class="legend" id="dji-leg"></div><div class="chart" id="dji"></div><div class="chart sm" id="dji-v"></div></div>
+  <div class="panel"><h2>필라델피아 반도체(SOX) <span class="tag" id="sox-tag"></span></h2><div class="legend" id="sox-leg"></div><div class="chart" id="sox"></div><div class="chart sm" id="sox-v"></div></div>
+  <div class="panel"><h2>VIX(변동성·공포지수) 1년</h2><div class="legend"><span>20 이상=불안, 30 이상=공포 구간</span></div><div class="chart md" id="vix"></div></div>
+  <div class="panel"><h2>CNN 공포·탐욕 지수 30일</h2><div class="legend"><span>0 극단적 공포 · 50 중립 · 100 극단적 탐욕</span></div><div class="chart md" id="fg"></div></div>
+  <div class="panel"><h2>풋/콜 비율(CBOE, 5일 평균) 6개월</h2><div class="legend"><span>높을수록 하락 대비(공포) · 0.7 아래 낙관 · 1.0 위 비관</span></div><div class="chart md" id="pc"></div></div>
+  <p class="note">거래량: 상승일 빨강·하락일 파랑. 200일선 위/아래는 정보용(코어 적립은 매월 그대로). 자료: Yahoo Finance·CNN, 지연 시세.</p>
+</section>
+
+<section id="tab-core" hidden>
+  <div class="panel"><h2>이번 달 적립 제안 (월 100만 원 · S&amp;P 70 : 나스닥 30)</h2>
+    <table><thead><tr><th>종목</th><th>현재가($)</th><th>수량</th><th>금액($)</th></tr></thead><tbody id="core-rows"></tbody></table>
+    <p class="note" id="core-note"></p></div>
+  <div class="panel"><h2>원칙</h2><p class="note">매월 월급 다음 날 전액 매수 · 모자란 쪽 먼저 · 팔지 않음 · 1월 점검(±10%p 이탈 시만 조정) · 12월 250만 원 공제 절세. 주문은 미래에셋 앱에서 직접.</p></div>
+</section>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-t="market">시장</button>
+  <button role="tab" aria-selected="false" data-t="core">내 코어</button>
+</nav>
+</div>
+<script>
+const D = /*__DATA__*/null;
+const css = n => getComputedStyle(document.querySelector('.viz-root')).getPropertyValue(n).trim();
+const f = (v, d = 2) => v == null ? '–' : Number(v).toLocaleString('ko-KR', {minimumFractionDigits: d, maximumFractionDigits: d});
+const sign = v => v == null ? '–' : (v > 0 ? '+' : '') + f(v);
+const NA = '확인 불가';
+const naBox = id => { const e = document.getElementById(id); if (e) { e.style.height = 'auto'; e.innerHTML = `<p class="note" style="padding:12px 4px">${NA} (외부 조회 실패)</p>`; } };
+const guard = fn => { try { fn(); } catch (e) { console.error(e); } };
+document.getElementById('built').textContent = '갱신 ' + D.built + ' · 미국장 종가 기준';
+
+// ① 요약 카드
+const fg = D.fg || {}; const fgKo = fg.rating ? (D.fg_ko[fg.rating] || fg.rating) : '조회 실패';
+const idxCard = (name, x) => x ? card(name, f(x.last), `<span class="${x.chg >= 0 ? 'up' : 'down'}">${sign(x.chg)}%</span> · 고점 대비 ${f(x.dd, 1)}%`) : card(name, NA, '조회 실패');
+const card = (k, v, s, cls = '') => `<div class="card"><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="s">${s}</div></div>`;
+document.getElementById('cards').innerHTML = [
+  idxCard('S&P 500', D.spx), idxCard('나스닥', D.ndx), idxCard('다우', D.dji), idxCard('반도체 SOX', D.sox),
+  D.vix ? card('VIX 공포지수', f(D.vix.last), D.vix.last >= 30 ? '공포 구간' : D.vix.last >= 20 ? '불안 구간' : '안정 구간') : card('VIX 공포지수', NA, '조회 실패'),
+  card('공포·탐욕(CNN)', fg.score ?? NA, fgKo),
+  card('풋/콜 비율', fg.pc ? f(fg.pc.last, 2) : NA, fg.pc ? (D.fg_ko[fg.pc.rating] || fg.pc.rating) : '조회 실패'),
+  D.tnx ? card('미 10년물 금리', f(D.tnx.last) + '%', `전일 ${sign(D.tnx.chg)}%p`) : card('미 10년물 금리', NA, '조회 실패'),
+  D.krw ? card('원/달러', f(D.krw.last, 1), `전일 ${sign(D.krw.chg)}원`) : card('원/달러', NA, '조회 실패'),
+].join('');
+for (const k of ['spx', 'ndx', 'dji', 'sox']) document.getElementById(k + '-tag').textContent = D[k] ? (D[k].above200 ? '200일선 위' : '200일선 아래') : NA;
+
+// ② 지수 차트(일봉 + 이동평균 4개 + 거래량)
+const base = el => LightweightCharts.createChart(el, {autoSize: true,
+  layout: {background: {color: 'transparent'}, textColor: css('--text-secondary'), fontSize: 11},
+  grid: {vertLines: {visible: false}, horzLines: {color: css('--grid')}},
+  rightPriceScale: {borderVisible: false}, timeScale: {borderVisible: false},
+  crosshair: {mode: LightweightCharts.CrosshairMode.Normal}, handleScroll: true, handleScale: true});
+function indexChart(k) {
+  const s = D[k], ch = base(document.getElementById(k)), vch = base(document.getElementById(k + '-v'));
+  const c = ch.addCandlestickSeries({upColor: css('--up'), downColor: css('--down'), wickUpColor: css('--up'), wickDownColor: css('--down'), borderVisible: false});
+  c.setData(s.candles);
+  const lines = {};
+  for (const n of [20, 60, 120, 240]) { lines[n] = ch.addLineSeries({color: css('--ma' + n), lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false}); lines[n].setData(s.ma[n]); }
+  const v = vch.addHistogramSeries({priceFormat: {type: 'volume'}, priceLineVisible: false, lastValueVisible: false});
+  v.setData(s.volume.map(x => ({time: x.time, value: x.value, color: x.up ? css('--up') : css('--down')})));
+  const leg = document.getElementById(k + '-leg');
+  const show = (ma, close) => leg.innerHTML = `<span>종가 ${f(close)}</span>` + [20, 60, 120, 240].map(n => `<span><i style="background:${css('--ma' + n)}"></i>${n}일 ${f(ma[n])}</span>`).join('') + (s.vol_ratio ? `<span>거래량 20일평균 대비 ${f(s.vol_ratio)}배</span>` : '');
+  show(s.ma_last, s.last);
+  ch.subscribeCrosshairMove(p => { if (!p.time) return show(s.ma_last, s.last); const m = {}; for (const n in lines) m[n] = p.seriesData.get(lines[n])?.value; show(m, p.seriesData.get(c)?.close); });
+  ch.timeScale().setVisibleLogicalRange({from: s.candles.length - 130, to: s.candles.length});
+  ch.timeScale().subscribeVisibleLogicalRangeChange(r => r && vch.timeScale().setVisibleLogicalRange(r));
+}
+for (const k of ['spx', 'ndx', 'dji', 'sox']) { if (D[k]) guard(() => indexChart(k)); else { naBox(k); document.getElementById(k + '-v').style.display = 'none'; } }
+
+// ③ VIX·공포탐욕
+if (D.vix) guard(() => { const vc = base(document.getElementById('vix')); const vl = vc.addLineSeries({color: css('--line'), lineWidth: 1.5, priceLineVisible: false});
+vl.setData(D.vix.line); vc.timeScale().fitContent(); for (const [lv, t] of [[20, '불안'], [30, '공포']]) vl.createPriceLine({price: lv, color: css('--text-muted'), lineWidth: 1, lineStyle: 2, title: t}); }); else naBox('vix');
+if (!fg.hist) naBox('fg'); if (!fg.pc) naBox('pc');
+if (fg.hist) { const gc = base(document.getElementById('fg')); const gl = gc.addLineSeries({color: css('--line'), lineWidth: 1.5, priceLineVisible: false});
+  gl.setData(fg.hist); gc.timeScale().fitContent(); for (const [lv, t] of [[25, '공포'], [50, '중립'], [75, '탐욕']]) gl.createPriceLine({price: lv, color: css('--text-muted'), lineWidth: 1, lineStyle: 2, title: t}); }
+
+if (fg.pc) { const pcC = base(document.getElementById('pc')); const pl = pcC.addLineSeries({color: css('--line'), lineWidth: 1.5, priceLineVisible: false, priceFormat: {type: 'price', precision: 2, minMove: 0.01}});
+  pl.setData(fg.pc.hist); pcC.timeScale().fitContent(); for (const [lv, tt] of [[0.7, '낙관'], [1.0, '비관']]) pl.createPriceLine({price: lv, color: css('--text-muted'), lineWidth: 1, lineStyle: 2, title: tt}); }
+
+// ④ 내 코어
+const C = D.core;
+if (C) { let tot = 0;
+document.getElementById('core-rows').innerHTML = Object.entries(C.plan).map(([t, n]) => { const amt = n * C.px[t]; tot += amt; return `<tr><td>${t}</td><td>${f(C.px[t])}</td><td>${n}주</td><td>${f(amt)}</td></tr>`; }).join('');
+document.getElementById('core-note').textContent = `100만 원 ≈ $${f(C.usd)} (원/달러 ${f(D.krw.last, 1)}) · 매수 후 비중 S&P ${f(C.weight.SPYM,1)}% : 나스닥 ${f(C.weight.QQQM,1)}% · 매수 $${f(tot)} · 남는 돈 $${f(C.carry_usd)}(약 ${C.carry_krw.toLocaleString('ko-KR')}원)은 다음 달로 이월 · 첫 달은 1주 단위라 비중이 목표와 다르고, 다음 달부터 모자란 쪽을 먼저 사서 70:30으로 맞춰 갑니다 · SPLG는 SPYM으로 티커 변경됨`;
+} else { document.getElementById('core-rows').innerHTML = `<tr><td colspan="4">${NA}</td></tr>`; document.getElementById('core-note').textContent = '시세·환율 조회 실패로 이번 갱신에서는 제안을 계산하지 못했습니다.'; }
+
+// 탭
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  document.getElementById('tab-market').hidden = b.dataset.t !== 'market'; document.getElementById('tab-core').hidden = b.dataset.t !== 'core';
+});
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(console.error));
+</script></body></html>
